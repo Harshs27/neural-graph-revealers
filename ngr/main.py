@@ -46,7 +46,92 @@ def product_weights_MLP(model):
     return W
 
 
+# Currently Experimental
 def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
+    """Pass the input X through the NGM model
+    to obtain the X_pred. 
+
+    LOSS = reg_loss + lambd * structure_loss
+
+    The 'hadamard' ||prodW * Sc|| is more theoretically sound as it just 
+    focuses on the terms needed to zero out and completely drop the 
+    non-zero terms. 
+    The 'diff' ||prodW-S|| also tries to make the non-zero terms go to 1.
+
+    Args:
+        X (torch.Tensor BxD): Input data
+        model (torch.nn.object): The MLP model for NGM's `neural' view
+        S (pd.DataFrame): Adjacency matrix from graph G
+        structure_penalty (str): 'hadamard':||prodW * Sc||, 'diff':||prodW-S||
+        lambd (float): reg_loss + lambd * structure_loss
+            Recommended lambd=1 as the losses are scaled to the same range.
+    
+    Returns:
+        (list): [
+            Xp (torch.Tensor BxD): The predicted X
+            loss (torch.scalar): The NGM loss 
+            reg_loss (torch.scalar): The regression term loss
+            structure_loss (torch.scalar): The structure penalty loss
+        ]
+    """
+    # 1. Running the NGM model 
+    Xp = model.MLP(X)
+    # 2. Calculate the regression loss
+    mse = nn.MSELoss() 
+    reg_loss = mse(Xp, X)
+    # 3. Calculate the structure loss
+    # 3.1 Get the frame of the graph structure
+    if structure_penalty=='hadamard':
+        # Get the complement of S (binarized)
+        Sg = (S==0).astype(int)
+        Sg = dp.convertToTorch(np.array(Sg), req_grad=False)
+    elif structure_penalty=='diff':
+        # Binarize the adjacency matrix S
+        Sg = (S!=0).astype(int)
+        Sg = dp.convertToTorch(np.array(Sg), req_grad=False)
+    else:
+        print(f'Structure penalty {structure_penalty} is not defined')
+        sys.exit(0)
+    # 3.2 Initialize the structure loss
+    structure_loss = torch.zeros(1)[0]
+    if lambd > 0:
+        # 3.3 Get the product of weights (L2 normalized) of the MLP
+        prod_W = product_weights_MLP(model)
+        # making it symmetric: TODO: CHANGED
+        # prod_W = (prod_W + torch.transpose(prod_W, 0, 1))/2.0
+        D = prod_W.shape[-1]
+        # 3.4 Calculate the penalty
+        if structure_penalty=='hadamard':
+            # Constraint to make the diagonal zero
+            # CHANGED from ord=1
+            # print(f'Sg {Sg ,prod_W*Sg}')
+            # brr
+            structure_loss_diag = torch.linalg.norm(prod_W*Sg, ord=2)#'fro') # TODO: CHANGED
+            # Constraint on making the connections sparse
+            structure_loss_l1 = torch.linalg.norm(prod_W, ord=2)#'fro')
+            # Constraint to make prodW symmetric, A = A^T
+            # struct_symm_mse = nn.MSELoss()
+            structure_loss_symm = torch.linalg.norm(prod_W - torch.transpose(prod_W, 0, 1), ord=1)
+            # print(f'Check structure loss2: {structure_loss}')
+        # elif structure_penalty=='diff':
+        #     struct_mse = nn.MSELoss() 
+        #     structure_loss = struct_mse(prod_W, Sg)
+        else:
+            print(f'Structure penalty {structure_penalty} not valid')
+        # 3.5 Scale the structure loss
+        structure_loss_l1 = structure_loss_l1/(D**2)
+        structure_loss_diag = structure_loss_diag/(D**2)
+        structure_loss_symm = structure_loss_symm/(D**2)
+        # Add log scaling
+        print(f'Struct loss: diag {structure_loss_diag}, prod_w sparsity {structure_loss_l1}')
+        # structure_loss = -1*torch.log(structure_loss_l1) + -1*torch.log(structure_loss_diag)# + -1*torch.log(structure_loss_symm)
+        structure_loss = torch.log(structure_loss_l1) + torch.log(structure_loss_diag)# + torch.log(structure_loss_symm)
+    # 4. Calculate the total loss = reg_loss + lambd * struct_loss
+    loss = reg_loss + lambd * structure_loss
+    return Xp, loss, reg_loss, structure_loss
+
+# _no_scaling
+def forward_NGM_no_scaling(X, model, S, structure_penalty='hadamard', lambd=0.1):
     """Pass the input X through the NGM model
     to obtain the X_pred. 
 
@@ -101,9 +186,9 @@ def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
         D = prod_W.shape[-1]
         # 3.4 Calculate the penalty
         if structure_penalty=='hadamard':
-            # Using the L2 norm for high structure penalty
+            # Using the L2 norm for high structure penalty (ADD log)
             structure_loss = torch.linalg.norm(prod_W*Sg, ord=1) # TODO: CHANGED
-            # print(f'Check structure loss: {structure_loss}')
+            # print(f'Check structure loss: {structure_loss}') (ADD log)
             structure_loss = structure_loss + torch.linalg.norm(prod_W, ord=1)
             # print(f'Check structure loss2: {structure_loss}')
         elif structure_penalty=='diff':
@@ -111,6 +196,8 @@ def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
             structure_loss = struct_mse(prod_W, Sg)
         # 3.5 Scale the structure loss
         structure_loss = structure_loss/(D**2)
+        # Add log scaling
+        # structure_loss = -1*torch.log(structure_loss)
     # 4. Calculate the total loss = reg_loss + lambd * struct_loss
     loss = reg_loss + lambd * structure_loss
     return Xp, loss, reg_loss, structure_loss
