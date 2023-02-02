@@ -98,7 +98,7 @@ def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
         # 3.3 Get the product of weights (L2 normalized) of the MLP
         prod_W = product_weights_MLP(model)
         # making it symmetric: TODO: CHANGED
-        # prod_W = (prod_W + torch.transpose(prod_W, 0, 1))/2.0
+        prod_W = (prod_W + torch.transpose(prod_W, 0, 1))/2.0
         D = prod_W.shape[-1]
         # 3.4 Calculate the penalty
         if structure_penalty=='hadamard':
@@ -106,12 +106,15 @@ def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
             # CHANGED from ord=1
             # print(f'Sg {Sg ,prod_W*Sg}')
             # brr
-            structure_loss_diag = torch.linalg.norm(prod_W*Sg, ord=2)#'fro') # TODO: CHANGED
+            structure_loss_diag = torch.linalg.norm(prod_W*Sg, ord=1)#'fro') # TODO: CHANGED
             # Constraint on making the connections sparse
-            structure_loss_l1 = torch.linalg.norm(prod_W, ord=2)#'fro')
+            structure_loss_W_sparsity = torch.linalg.norm(prod_W, ord=1) #+ torch.count_nonzero(prod_W)
+            # structure_loss_W_sparsity =  torch.linalg.norm(prod_W, ord='fro')#'fro')
+            # structure_loss_W_sparsity = torch.count_nonzero(prod_W)
+            # structure_loss_W_sparsity = torch.linalg.norm(prod_W, ord=1) + torch.linalg.norm(prod_W, ord='fro') + torch.count_nonzero(prod_W)
             # Constraint to make prodW symmetric, A = A^T
             # struct_symm_mse = nn.MSELoss()
-            structure_loss_symm = torch.linalg.norm(prod_W - torch.transpose(prod_W, 0, 1), ord=1)
+            # structure_loss_symm = torch.linalg.norm(prod_W - torch.transpose(prod_W, 0, 1), ord='fro')
             # print(f'Check structure loss2: {structure_loss}')
         # elif structure_penalty=='diff':
         #     struct_mse = nn.MSELoss() 
@@ -119,13 +122,14 @@ def forward_NGM(X, model, S, structure_penalty='hadamard', lambd=0.1):
         else:
             print(f'Structure penalty {structure_penalty} not valid')
         # 3.5 Scale the structure loss
-        structure_loss_l1 = structure_loss_l1/(D**2)
+        structure_loss_W_sparsity = structure_loss_W_sparsity/(D**2)
         structure_loss_diag = structure_loss_diag/(D**2)
-        structure_loss_symm = structure_loss_symm/(D**2)
-        # Add log scaling
-        print(f'Struct loss: diag {structure_loss_diag}, prod_w sparsity {structure_loss_l1}')
-        # structure_loss = -1*torch.log(structure_loss_l1) + -1*torch.log(structure_loss_diag)# + -1*torch.log(structure_loss_symm)
-        structure_loss = torch.log(structure_loss_l1) + torch.log(structure_loss_diag)# + torch.log(structure_loss_symm)
+        # structure_loss_symm = structure_loss_symm/(D**2)
+        # Add log scaling as IT MAKES SURE that the diagonals are low!
+        # print(f'Struct loss: diag {structure_loss_diag}, prod_w sparsity {structure_loss_W_sparsity}')
+        structure_loss = structure_loss_W_sparsity + structure_loss_diag
+        # structure_loss = torch.log(structure_loss_W_sparsity) + torch.log(structure_loss_diag)# + torch.log(structure_loss_symm)
+        # structure_loss = structure_loss_W_sparsity + structure_loss_diag
     # 4. Calculate the total loss = reg_loss + lambd * struct_loss
     loss = reg_loss + lambd * structure_loss
     return Xp, loss, reg_loss, structure_loss
@@ -197,7 +201,7 @@ def forward_NGM_no_scaling(X, model, S, structure_penalty='hadamard', lambd=0.1)
         # 3.5 Scale the structure loss
         structure_loss = structure_loss/(D**2)
         # Add log scaling
-        # structure_loss = -1*torch.log(structure_loss)
+        # structure_loss = torch.log(structure_loss)
     # 4. Calculate the total loss = reg_loss + lambd * struct_loss
     loss = reg_loss + lambd * structure_loss
     return Xp, loss, reg_loss, structure_loss
@@ -483,11 +487,11 @@ def recover_graph(
                 print(f'Train: loss={dp.t2np(loss_train)}, reg={dp.t2np(reg_loss_train)}, struct={dp.t2np(struct_loss_train)}')
                 print(f'Test: loss={dp.t2np(loss_test)}, reg={dp.t2np(reg_loss_test)}, struct={dp.t2np(struct_loss_test)}')
             # Updating the best model for this fold
-            _loss_test = dp.t2np(loss_test)
+            _loss_test = dp.t2np(reg_loss_test)
             if _loss_test < best_test_loss and e%10==9: # e%100==99: # EVERY 100th epoch, update the model.
                 results_Kfold[_k]['best_model_updates'] = f'Fold {_k}: epoch:{e}/{epochs}:\n\
                     Train: loss={dp.t2np(loss_train)}, reg={dp.t2np(reg_loss_train)}, struct={dp.t2np(struct_loss_train)}\n\
-                    Test: loss={dp.t2np(loss_test)}, reg={dp.t2np(reg_loss_test)}, struct={dp.t2np(struct_loss_test)}'
+                    Test (reg): loss={dp.t2np(loss_test)}, reg={dp.t2np(reg_loss_test)}, struct={dp.t2np(struct_loss_test)}'
                 # if VERBOSE and not e%PRINT or e==epochs-1:
                     # print(f'Fold {_k}: epoch:{e}/{epochs}: Updating the best model with test loss={_loss_test}')
                 best_model_kfold = copy.deepcopy(model)
