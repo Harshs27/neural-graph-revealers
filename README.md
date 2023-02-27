@@ -1,40 +1,33 @@
-## Recover Graphs using Neural Graphical Models  
-`Neural Graphical Models` (NGMs) attempt to represent complex feature dependencies with reasonable computational costs. Specifically, given a graph, we capture the dependency structure between the features along with their complex function representations by using neural networks as a multi-task learning framework. We provide efficient learning, inference and sampling algorithms for NGMs. Moreover, NGMs can fit generic graph structures including directed, undirected and mixed-edge graphs as well as support mixed input data types.  
+## Neural Graph Revealers
+Neural Graph Revealers (NGRs) can model highly non-linear
+and complex functional dependencies between the features by leveraging the expressive power of neural networks. It is a regression based approach that takes the D features as input and maps them to the same features as the output. In order to achieve sparsity without compromising on the function representation capacity, NGRs build up on the neat idea of viewing the neural networks as a ‘white box’. Specifically, the NNs can be considered as a multitask learning framework between
+the input and output units. The paths between the input and output units are used to capture feature dependencies and thus restricting these paths (eg. using path-norms) can enforce desired sparsity in an unsupervised manner.  
 
-Key benefits & features:   
-- Facilitate rich representations of complex underlying distributions.  
-- Support various relationship types including directed, undirected, mixed-edge graphs.  
+Key benefits & features:  
+- The functional dependencies are modeled using neural networks which are capable of representing rich & complex distributions.
 - Fast and efficient algorithms for learning, inference and sampling.  
-- Direct access to the learned underlying distributions for analysis.  
+- Direct access to the learned underlying distributions for analysis. `NGR` is an instance of `Neural Graphical Models` 
 - Handle different input data types like categorical, images & generic embedding representations.  
-- Fast and scalable, supports batch learning with GPU support.  
+- Supports batch learning with GPU support.  
  
 
 ### High level overview  
 
-<img src="images/graphical-view.png" width="800" title="NGMs: graphical view" />  
+<img src="images/ngr-flow.png" width="800" title="NGMs: graphical view" />  
 
-<img src="images/neural-view.png" width="800" title="NGMs: neural view" />       
-
-<img src="images/neural-view-projection-modules.png" width="800" title="NGMs: neural view with projection modules" />       
-
-### Algorithms  
-
-<p float="left" align="center">
-    <img src="images/NGM-learning.png" width="300" />    
-    <img src="images/NGM-inference.png" width="300" />    
-    <img src="images/NGM-sampling.png" width="300" />   
-</p>
+<img src="images/ngr-multimodal.png" width="800" title="NGMs: neural view" />       
 
 ## Setup  
 The `setup.sh` file contains the complete procedure of creating a conda environment to run mGLAD model. run `bash setup.sh`    
-In case of dependencies conflict, one can alternatively use this command `conda env create --name ngm --file=environment.yml`.  
+In case of dependencies conflict, one can alternatively use this command `conda env create --name ngr --file=environment.yml`.  
 
-## demo on representing Gausssian Graphical models (GGMs) using NGMs    
-A minimalist working example of NGMs is given in `demo_NGMs.ipynb`. It is a good entry point to understand the code structure as well as NGMs.  
+## Demo on recovering Gausssian Graphical models (GGMs) using NGRs    
+A minimalist working example of NGRs is given in `demo_NGR.ipynb`. It is a good entry point to understand the code structure as well as NGRs.  
 
 ## Citation  
 If you find this method useful, kindly cite the following associated papers:  
+- `Neural Graph Revealers`: [arxiv](<>)  
+
 - `Neural Graphical Models`: [arxiv](<https://arxiv.org/abs/2210.00453>)  
 
 @article{shrivastava2022neural,  
