@@ -26,7 +26,8 @@ A minimalist working example of NGRs is given in `demo_NGR.ipynb`. It is a good 
 
 ## Citation  
 If you find this method useful, kindly cite the following associated papers:  
-- `Neural Graph Revealers`: [arxiv](<>)  
+- `Neural Graph Revealers`: [arxiv](<https://arxiv.org/abs/2302.13582>)  
+
 
 - `Neural Graphical Models`: [arxiv](<https://arxiv.org/abs/2210.00453>)  
 
@@ -39,9 +40,13 @@ If you find this method useful, kindly cite the following associated papers:
 
 - `uGLAD`: Sparse graph recovery by optimizing deep unrolled networks. [arxiv](<https://arxiv.org/abs/2205.11610>)  
 
-@article{shrivastava2022uglad,  
-  title={uGLAD: Sparse graph recovery by optimizing deep unrolled networks},  
-  author={Shrivastava, Harsh and Chajewska, Urszula and Abraham, Robin and Chen, Xinshi},  
-  journal={arXiv preprint arXiv:2205.11610},  
-  year={2022}  
-}
+@inproceedings{
+shrivastava2022a,
+title={A deep learning approach to recover conditional independence graphs},
+author={Harsh Shrivastava and Urszula Chajewska and Robin Abraham and Xinshi Chen},
+booktitle={NeurIPS 2022 Workshop: New Frontiers in Graph Learning},
+year={2022},
+url={https://openreview.net/forum?id=kEwzoI3Am4c}
+}  
+
+Talk: https://www.youtube.com/watch?v=Mx9VSQJACsA
