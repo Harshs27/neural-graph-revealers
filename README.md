@@ -27,7 +27,7 @@ A minimalist working example of NGRs is given in `demo_NGR.ipynb`. It is a good 
 ## Citation  
 If you find this method useful, kindly cite the following associated papers:  
 
-
+- `Neural Graph Revealers`: [arxiv](<https://arxiv.org/abs/2302.13582>)   
 
 - `Neural Graphical Models`: [arxiv](<https://arxiv.org/abs/2210.00453>)  
 
